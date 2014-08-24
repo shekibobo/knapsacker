@@ -7,3 +7,7 @@
 (def optimized-dolls
   (parse-csv (slurp "resources/optimized_dolls.csv") :key :keyword))
 
+
+(defn knapsack
+  [max-weight available-dolls]
+  [])
