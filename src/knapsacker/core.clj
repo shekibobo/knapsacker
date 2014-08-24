@@ -1,7 +1,9 @@
 (ns knapsacker.core
-  (:gen-class))
+  (:use [csv-map.core :as csv]))
 
-(defn -main
-  "I don't do a whole lot ... yet."
-  [& args]
-  (println "Hello, World!"))
+(def dolls
+  (parse-csv (slurp "resources/dolls.csv") :key :keyword))
+
+(def optimized-dolls
+  (parse-csv (slurp "resources/optimized_dolls.csv") :key :keyword))
+
