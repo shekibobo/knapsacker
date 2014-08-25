@@ -46,39 +46,44 @@
 (def available-dolls (vec (dolls "resources/dolls.csv")))
 (def optimized-dolls (vec (dolls "resources/optimized_dolls.csv")))
 
-;; This is declared so it will be accessible within the primary sack-value
-;; function. msack-value is a memoized sack value, which will cache the
+;; This is declared so it will be accessible within the primary optimal-knapsack
+;; function. moptimal-knapsack is a memoized sack value, which will cache the
 ;; arguments and return values. Explained more below.
-(declare msack-value)
+(declare moptimal-knapsack)
 
 ; Get the value of the items in sack at [item-index size] (or zero)
-(defn sack-value
+(defn optimal-knapsack
   "Expects item-count - 1 and the capacity of the knapsack."
   [item-index size]
-  (let [debug1 (println (clojure.string/join ", " [item-index size]))]
+  (let []
     (cond
       ;; provide endpoints of the grid
-      (< item-index 0) 0
-      (= size 0) 0
+      (< item-index 0) [0 []]
+      (= size 0) [0 []]
       :else
       (let [{weight :weight value :value} (get available-dolls item-index)]
         (if (> weight size)
-          (msack-value (dec item-index) size)
-          (let [value-leave (msack-value (dec item-index) size)
-                value-take (msack-value (dec item-index) (- size weight))]
+          (moptimal-knapsack (dec item-index) size)
+          (let [[value-leave not-selected] (moptimal-knapsack (dec item-index) size)
+                [value-take selected] (moptimal-knapsack (dec item-index) (- size weight))]
             (if (> (+ value-take value) value-leave)
-              (+ value-take value)
-              value-leave)))))))
+              [(+ value-take value) (conj selected (get available-dolls item-index))]
+              [value-leave not-selected])))))))
 
 ;; Since we're in an immutable ecosystem, we can't
 ;; just use an outside variable, since it can't change anyway. We could also
 ;; pass state, but that can become very complicated. Instead, we will just
-;; use msack-value from within the sack-value function, since it will remember
-;; the values that it has already found for us.
-(def msack-value (memoize sack-value))
+;; use moptimal-knapsack from within the optimal-knapsack function, since it
+;;will remember the values that it has already found for us.
+(def moptimal-knapsack (memoize optimal-knapsack))
 
 ;; Retrieve the optimal value of the dolls that can fit in the knapsack.
 (defn optimal-value
   [capacity items]
   (let [n-items (count items)]
-    (sack-value (dec n-items) capacity)))
+    (first (optimal-knapsack (dec n-items) capacity))))
+
+(defn optimal-set
+  [capacity items]
+  (let [n-items (count items)]
+    (second (optimal-knapsack (dec n-items) capacity))))
