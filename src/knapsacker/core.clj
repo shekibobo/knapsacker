@@ -22,7 +22,7 @@
 (def sum #(reduce + %))
 
 ;; Use csv-map to import a CSV file. See /resources/*.csv
-(defn imported-dolls
+(defn imported-items
   "Expects path to a csv file relative to project root"
   [filename]
   (parse-csv (slurp filename) :key :keyword))
@@ -30,21 +30,17 @@
 ;; Convert dolls imported from CSV so that values and weights are integers.
 ;; When importing from CSV, all values are considered strings, and we can't do
 ;; arithmetic on strings.
-(defn convert-doll
-  "Converts raw csv imported properties to the correct type. Expects a doll."
+(defn convert-item
+  "Converts raw csv imported properties to the correct type."
   [doll]
   (into {}
         (map (fn [[key val]] [key ((get conversions key) val)])
              doll)))
 
-(defn dolls
-  "Expects a csv path relative to project root. Returns a usable doll map."
+(defn items
+  "Expects a csv path relative to project root. Returns a usable item map."
   [filename]
-  (map convert-doll (imported-dolls filename)))
-
-;; Helpers to quickly access the dolls we use for testing.
-(def available-dolls (vec (dolls "resources/dolls.csv")))
-(def optimized-dolls (vec (dolls "resources/optimized_dolls.csv")))
+  (map convert-item (imported-items filename)))
 
 ;; This is declared so it will be accessible within the primary optimal-knapsack
 ;; function. moptimal-knapsack is a memoized sack value, which will cache the
@@ -54,20 +50,20 @@
 ; Get the value of the items in sack at [item-index size] (or zero)
 (defn optimal-knapsack
   "Expects item-count - 1 and the capacity of the knapsack."
-  [item-index size]
+  [item-index size things]
   (let []
     (cond
       ;; provide endpoints of the grid
       (< item-index 0) [0 []]
       (= size 0) [0 []]
       :else
-      (let [{weight :weight value :value} (get available-dolls item-index)]
+      (let [{weight :weight value :value} (nth things item-index)]
         (if (> weight size)
-          (moptimal-knapsack (dec item-index) size)
-          (let [[value-leave not-selected] (moptimal-knapsack (dec item-index) size)
-                [value-take selected] (moptimal-knapsack (dec item-index) (- size weight))]
+          (moptimal-knapsack (dec item-index) size things)
+          (let [[value-leave not-selected] (moptimal-knapsack (dec item-index) size things)
+                [value-take selected] (moptimal-knapsack (dec item-index) (- size weight) things)]
             (if (> (+ value-take value) value-leave)
-              [(+ value-take value) (conj selected (get available-dolls item-index))]
+              [(+ value-take value) (conj selected (nth things item-index))]
               [value-leave not-selected])))))))
 
 ;; Since we're in an immutable ecosystem, we can't
@@ -81,9 +77,9 @@
 (defn optimal-value
   [capacity items]
   (let [n-items (count items)]
-    (first (optimal-knapsack (dec n-items) capacity))))
+    (first (optimal-knapsack (dec n-items) capacity items))))
 
 (defn optimal-set
   [capacity items]
   (let [n-items (count items)]
-    (second (optimal-knapsack (dec n-items) capacity))))
+    (second (optimal-knapsack (dec n-items) capacity items))))
